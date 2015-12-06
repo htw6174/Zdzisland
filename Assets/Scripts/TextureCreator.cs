@@ -45,7 +45,7 @@ public class TextureCreator : MonoBehaviour {
 
     public bool liveTexture = false;
 
-    private TerrainData data;
+    private TerrainData terrainData;
 
     private float[,] heights;
 
@@ -53,7 +53,8 @@ public class TextureCreator : MonoBehaviour {
 
     private int[,] details;
 	
-	private void OnEnable () {
+	private void Awake () {
+        terrainData = GetComponent<Terrain>().terrainData;
 		//FillHeights();
 	}
 
@@ -75,8 +76,8 @@ public class TextureCreator : MonoBehaviour {
 
 	public void FillHeights ()
     {
-        int resolution = Terrain.activeTerrain.terrainData.heightmapWidth;
-        terrainHeight = Terrain.activeTerrain.terrainData.heightmapHeight;
+        int resolution = terrainData.heightmapWidth;
+        terrainHeight = terrainData.heightmapHeight;
         heights = new float[resolution, resolution];
 
         Vector3 point00 = position + new Vector3(-0.5f,-0.5f);
@@ -95,21 +96,21 @@ public class TextureCreator : MonoBehaviour {
 				if (type != NoiseMethodType.Value) {
 					sample = sample * 0.5f + 0.5f;
 				}
-                heights[y, x] = (sample * amplitude) + (offset);
+                heights[y, x] = (sample * amplitude * terrainData.heightmapWidth * (1f/100f)) + (offset);
 			}
 		}
-        Terrain.activeTerrain.terrainData.SetHeights(0, 0, heights);
+        terrainData.SetHeights(0, 0, heights);
 	}
 
     public void FillTexture()
     {
-        int resolution = Terrain.activeTerrain.terrainData.alphamapWidth;
+        int resolution = terrainData.alphamapWidth;
         texture = new float[resolution, resolution, 2];
         for (int y = 0; y < resolution; y++)
         {
             for (int x = 0; x < resolution; x++)
             {
-                Vector3 normal = Terrain.activeTerrain.terrainData.GetInterpolatedNormal((float)x / resolution, (float)y / resolution);
+                Vector3 normal = terrainData.GetInterpolatedNormal((float)x / resolution, (float)y / resolution);
                 float angle = Vector3.Angle(Vector3.up, normal);
                 float slope = Mathf.Clamp(angle / cliffAngle, 0, 1);
                 //if (x % 100 == 0 && y % 100 == 0)
@@ -121,12 +122,12 @@ public class TextureCreator : MonoBehaviour {
                 texture[y, x, 1] = cliffTransition.Evaluate(slope);
             }
         }
-        Terrain.activeTerrain.terrainData.SetAlphamaps(0, 0, texture);
+        terrainData.SetAlphamaps(0, 0, texture);
     }
 
     public void FillDetails()
     {
-        int resolution = Terrain.activeTerrain.terrainData.detailWidth;
+        int resolution = terrainData.detailWidth;
         details = new int[resolution, resolution];
 
         Vector3 point00 = position + new Vector3(-0.5f, -0.5f);
@@ -142,7 +143,7 @@ public class TextureCreator : MonoBehaviour {
             Vector3 point1 = Vector3.Lerp(point10, point11, (y + 0.5f) * stepSize);
             for (int x = 0; x < resolution; x++)
             {
-                Vector3 normal = Terrain.activeTerrain.terrainData.GetInterpolatedNormal((float)x / resolution, (float)y / resolution);
+                Vector3 normal = terrainData.GetInterpolatedNormal((float)x / resolution, (float)y / resolution);
                 float angle = Vector3.Angle(Vector3.up, normal);
                 if(angle < grassGrowthAngle)
                 {
@@ -160,16 +161,16 @@ public class TextureCreator : MonoBehaviour {
                 }
             }
         }
-        Terrain.activeTerrain.terrainData.SetDetailLayer(0, 0, 0, details);
+        terrainData.SetDetailLayer(0, 0, 0, details);
     }
 
     public void PlaceTrees(int prototypeIndex)
     {
         //clear trees
-        Terrain.activeTerrain.terrainData.treeInstances = new TreeInstance[treeFrequency];
+        terrainData.treeInstances = new TreeInstance[treeFrequency];
 
         //place trees
-        Vector3 maxPosition = Terrain.activeTerrain.terrainData.size;
+        Vector3 maxPosition = terrainData.size;
         for(int i = 0; i < treeFrequency; i++)
         {
             TreeInstance instance = new TreeInstance();
@@ -179,7 +180,7 @@ public class TextureCreator : MonoBehaviour {
             instance.lightmapColor = Color.white;
             instance.position = new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
             instance.prototypeIndex = prototypeIndex;
-            Terrain.activeTerrain.AddTreeInstance(instance);
+            GetComponent<Terrain>().AddTreeInstance(instance);
             Debug.Log("Placed tree #" + (i + 1));
         }
     }
